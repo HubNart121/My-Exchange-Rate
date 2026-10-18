@@ -203,6 +203,7 @@ dialog::backdrop{background:rgba(10,20,30,.45)}
       <section class="card summary" id="summary"></section>
 
       <div class="toolbar">
+        <button class="btn primary" id="pPng">🖼 ดาวน์โหลดรายงาน PNG</button>
         <button class="btn" id="pCopy">📋 คัดลอกสรุปไปส่ง LINE</button>
         <button class="btn" id="pDup">⧉ ทำสำเนา</button>
         <button class="btn danger" id="pDel">🗑 ลบโปรเจกต์</button>
@@ -248,6 +249,7 @@ dialog::backdrop{background:rgba(10,20,30,.45)}
     <p class="note" id="baseNote"></p>
     <div class="toolbar">
       <input type="search" id="filter" placeholder="ค้นหาในเรทของฉัน…">
+      <button class="btn" id="ratesPng">🖼 ดาวน์โหลดรายงาน PNG</button>
     </div>
     <div class="rate-row head">
       <span>สกุลเงิน</span><span style="text-align:right">ซื้อ</span><span style="text-align:right">ขาย</span><span></span>
@@ -697,6 +699,133 @@ $("pCopy").addEventListener("click", async () => {
   const text = `🧾 ${p.name||"โปรเจกต์"}\n${lines.join("\n")}\n────────\nรวม ${fmt(c.total,p.cur)}\nหาร ${c.people} คน\n👉 คนละ ${fmt(c.per,p.cur)}`;
   try{ await navigator.clipboard.writeText(text); toast("คัดลอกแล้ว"); }
   catch(e){ prompt("คัดลอกข้อความนี้", text); }
+});
+
+/* ================= PNG REPORT ================= */
+const fmtN = n => isFinite(n) ? fmt(n) : "–";
+async function makeReport(o){
+  try{ await Promise.all(["400","600","700"].map(w => document.fonts.load(`${w} 16px "Noto Sans Thai"`))); }catch(e){}
+  const F = (w,s) => `${w} ${s}px "Noto Sans Thai", system-ui, sans-serif`;
+  const W = 820, pad = 36, inner = W - pad*2;
+  const hasSub = o.rows.some(r => r.some(c => c && typeof c === "object" && c.s));
+  const rowH = hasSub ? 56 : 44, headH = 120, thH = 40;
+  const sm = o.summary;
+  const sumH = sm ? 28 + sm.lines.length*30 + (sm.big ? 86 : 0) + (sm.warn ? 28 : 0) : 0;
+  const bodyRows = Math.max(o.rows.length, 1);
+  const H = headH + 28 + thH + bodyRows*rowH + 24 + (sm ? sumH + 24 : 0) + 44;
+  const sc = 2, cv = document.createElement("canvas");
+  cv.width = W*sc; cv.height = H*sc;
+  const x = cv.getContext("2d"); x.scale(sc,sc); x.textBaseline = "alphabetic";
+  const rr = (X,Y,w,h,r) => { x.beginPath(); if (x.roundRect) x.roundRect(X,Y,w,h,r); else x.rect(X,Y,w,h); };
+  const fit = (t, mw) => { t = String(t ?? ""); if (x.measureText(t).width <= mw) return t;
+    while (t.length && x.measureText(t+"…").width > mw) t = t.slice(0,-1); return t+"…"; };
+
+  // background + header
+  x.fillStyle = "#f4f6f9"; x.fillRect(0,0,W,H);
+  x.fillStyle = "#19456f"; x.fillRect(0,0,W,headH);
+  x.fillStyle = "#ffd700"; x.fillRect(0,headH-4,W,4);
+  x.fillStyle = "#fff"; x.font = F(700,28); x.fillText(fit(o.title, inner), pad, 54);
+  x.globalAlpha = .8; x.font = F(400,15); x.fillText(fit(o.subtitle, inner), pad, 86); x.globalAlpha = 1;
+
+  // table card
+  let y = headH + 28;
+  const tableH = thH + bodyRows*rowH;
+  x.fillStyle = "#fff"; rr(pad-12, y-8, inner+24, tableH+16, 14); x.fill();
+  x.strokeStyle = "#e3e7ee"; x.lineWidth = 1; x.stroke();
+  x.save(); rr(pad-12, y-8, inner+24, tableH+16, 14); x.clip();
+  const tot = o.cols.reduce((a,c)=>a+c.w,0);
+  let cx = pad; const colX = o.cols.map(c => { const s = cx; cx += c.w/tot*inner; return [s, c.w/tot*inner]; });
+  x.font = F(600,13); x.fillStyle = "#818183";
+  o.cols.forEach((c,i) => { const [cx0,cw] = colX[i];
+    x.textAlign = c.align || "left";
+    x.fillText(c.label, c.align==="right" ? cx0+cw-8 : cx0+ (i?8:0), y+24); });
+  x.textAlign = "left";
+  y += thH;
+  if (!o.rows.length){ x.font = F(400,15); x.fillStyle = "#818183"; x.textAlign="center"; x.fillText(o.empty || "ไม่มีข้อมูล", W/2, y+rowH/2+5); x.textAlign="left"; }
+  o.rows.forEach((r,ri) => {
+    if (ri % 2 === 0){ x.fillStyle = "#f7f9fc"; x.fillRect(pad-12, y, inner+24, rowH); }
+    x.fillStyle = "#e3e7ee"; x.fillRect(pad-12, y, inner+24, 1);
+    r.forEach((cell,i) => {
+      const c = o.cols[i], [cx0,cw] = colX[i];
+      const t = cell && typeof cell === "object" ? cell : {t:cell};
+      const tx = c.align==="right" ? cx0+cw-8 : cx0 + (i?8:0), mw = cw - 16;
+      x.textAlign = c.align || "left";
+      x.font = F(t.b ? 700 : 500, 16); x.fillStyle = t.warn ? "#c94545" : "#1d2733";
+      x.fillText(fit(t.t, mw), tx, y + (t.s ? 24 : rowH/2+6));
+      if (t.s){ x.font = F(400,12); x.fillStyle = "#818183"; x.fillText(fit(t.s, mw), tx, y+43); }
+    });
+    x.textAlign = "left"; y += rowH;
+  });
+  x.restore();
+  y += 32;
+
+  // summary
+  if (sm){
+    x.fillStyle = "#19456f"; rr(pad-12, y-8, inner+24, sumH, 14); x.fill();
+    let sy = y + 22;
+    sm.lines.forEach(([l,v]) => {
+      x.font = F(400,15); x.fillStyle = "rgba(255,255,255,.8)"; x.fillText(l, pad+6, sy);
+      x.font = F(600,15); x.fillStyle = "#fff"; x.textAlign = "right"; x.fillText(v, W-pad-6, sy); x.textAlign = "left";
+      sy += 30;
+    });
+    if (sm.big){
+      x.fillStyle = "rgba(255,255,255,.2)"; x.fillRect(pad+6, sy-14, inner-12, 1);
+      x.font = F(400,14); x.fillStyle = "rgba(255,255,255,.8)"; x.fillText(sm.big[0], pad+6, sy+14);
+      x.font = F(700,36); x.fillStyle = "#ffd700"; x.fillText(fit(sm.big[1], inner-12), pad+6, sy+58);
+      sy += 86;
+    }
+    if (sm.warn){ x.font = F(400,13); x.fillStyle = "#ffb4b4"; x.fillText(fit(sm.warn, inner-12), pad+6, sy); }
+    y += sumH + 24;
+  }
+
+  // footer
+  x.font = F(400,12); x.fillStyle = "#818183";
+  x.fillText("สร้างเมื่อ " + new Date().toLocaleString("th-TH",{dateStyle:"long",timeStyle:"short"}), pad, H-22);
+  x.textAlign = "right"; x.fillText("My Exchange Rate", W-pad, H-22);
+
+  const blob = await new Promise(res => cv.toBlob(res, "image/png"));
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = (o.file || "report").replace(/[\\/:*?"<>|]+/g,"-") + ".png";
+  document.body.appendChild(a); a.click(); a.remove();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+  toast("ดาวน์โหลดรายงานแล้ว");
+}
+const today = () => { const d = new Date(); return `${d.getFullYear()}-${String(d.getMonth()+1).padStart(2,"0")}-${String(d.getDate()).padStart(2,"0")}`; };
+const thDate = () => new Date().toLocaleDateString("th-TH",{dateStyle:"long"});
+
+$("ratesPng").addEventListener("click", () => {
+  const codes = Object.keys(S.rates).filter(c => c !== S.base).sort();
+  makeReport({
+    title: "อัตราแลกเปลี่ยน",
+    subtitle: `สกุลเงินหลัก ${S.base} (${nameTh(S.base)}) · ${thDate()} · 1 หน่วย = กี่ ${S.base}`,
+    cols: [{label:"สกุลเงิน",w:3},{label:`ซื้อ (${S.base})`,w:2,align:"right"},{label:`ขาย (${S.base})`,w:2,align:"right"},{label:`เรทกลาง (${S.base})`,w:2,align:"right"}],
+    rows: codes.map(c => { const r = S.rates[c];
+      return [{t:c, s:nameTh(c), b:true}, num(r.buy)!=null?fmtN(+r.buy):"–", num(r.sell)!=null?fmtN(+r.sell):"–", fmtN(inBase(c,"mid"))]; }),
+    empty: "ยังไม่มีเรท",
+    file: `exchange-rates-${today()}`
+  });
+});
+
+$("pPng").addEventListener("click", () => {
+  const p = P(), c = calc(p);
+  const lines = [["ยอดรวม (" + p.items.length + " รายการ)", fmt(c.total,p.cur)], ["หาร", c.people + " คน"]];
+  if ((parseFloat(p.round)||0) && Math.abs(c.per-c.raw) > 1e-9){
+    lines.push(["ก่อนปัดเศษ", fmt(c.raw,p.cur)], ["เก็บได้รวม (เกินยอดจริง)", `${fmt(c.collected,p.cur)} (+${fmt(c.collected-c.total,p.cur)})`]);
+  }
+  makeReport({
+    title: p.name || "โปรเจกต์",
+    subtitle: `สรุปค่าใช้จ่าย · ${thDate()} · สรุปยอดเป็น ${p.cur}`,
+    cols: [{label:"#",w:.5},{label:"รายการ",w:4},{label:"ราคา/หน่วย",w:2.2,align:"right"},{label:"จำนวน",w:1.1,align:"right"},{label:`รวม (${p.cur})`,w:2.4,align:"right"}],
+    rows: p.items.map((it,i) => { const l = c.lines[i];
+      return [String(i+1), it.name, {t:fmtN(parseFloat(it.price)||0), s:it.cur}, (parseFloat(it.qty)||0).toLocaleString("th-TH",{maximumFractionDigits:4}),
+        l.v == null ? {t:"ไม่มีเรท", s:fmt(l.sub,it.cur), warn:true}
+                    : {t:fmtN(l.v), s: it.cur!==p.cur ? "= "+fmt(l.sub,it.cur) : "", b:true}]; }),
+    empty: "ยังไม่มีรายการ",
+    summary: { lines, big:["แต่ละคนต้องจ่าย", fmt(c.per,p.cur)],
+      warn: c.missing.length ? `⚠ ไม่มีเรทสำหรับ ${c.missing.join(", ")} จึงไม่ถูกนับรวม` : "" },
+    file: `${p.name || "project"}-${today()}`
+  });
 });
 
 /* tabs */
