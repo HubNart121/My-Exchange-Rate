@@ -86,7 +86,49 @@ dialog::backdrop{background:rgba(10,20,30,.45)}
 .toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#19456f;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s}
 .toast.show{opacity:1}
 
+/* tabs */
+.tabs{display:flex;gap:6px;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:5px;margin-bottom:14px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.tab{flex:1;border:0;background:transparent;border-radius:9px;padding:9px 8px;cursor:pointer;font-weight:600;color:var(--muted);min-height:42px}
+.tab.on{background:var(--accent-soft);color:var(--brand)}
+[hidden]{display:none!important}
+
+/* projects */
+.proj-card{display:flex;align-items:center;gap:12px;cursor:pointer}
+.proj-card:hover{border-color:var(--accent)}
+.proj-card .pi{flex:1;min-width:0}
+.proj-card .pi b{display:block;font-size:16px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.proj-card .pi small{color:var(--muted);font-size:12px}
+.proj-card .pp{text-align:right;flex:none}
+.proj-card .pp b{display:block;color:var(--brand);font-size:16px}
+.proj-card .pp small{color:var(--muted);font-size:12px}
+.title-in{font-size:18px;font-weight:600}
+.grid3{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px}
+.stepper{display:flex;align-items:stretch;border:1px solid var(--line);border-radius:10px;overflow:hidden;min-height:44px}
+.stepper button{border:0;background:var(--accent-soft);color:var(--accent);width:40px;font-size:18px;cursor:pointer}
+.stepper input{border:0;border-radius:0;text-align:center;min-height:42px;box-shadow:none!important}
+.item{border-top:1px solid var(--line);padding:10px 0;display:grid;grid-template-columns:1fr 110px 70px 110px 30px;gap:8px;align-items:center}
+.item.head{border-top:0;padding-top:0;font-size:12px;color:var(--muted)}
+.item input,.item select{min-height:38px;padding:7px 9px}
+.item .conv-amt{grid-column:1 / -1;text-align:right;font-size:12px;color:var(--muted);margin-top:-4px}
+.item .conv-amt.warn{color:var(--danger)}
+.add-item{display:grid;grid-template-columns:1fr 110px 70px 110px auto;gap:8px;margin-top:10px;padding-top:12px;border-top:1px dashed var(--line)}
+.summary{border-radius:12px;background:#19456f;color:#fff;padding:16px}
+.summary .row{display:flex;justify-content:space-between;gap:10px;font-size:14px;opacity:.85;padding:2px 0}
+.summary .pp{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.2)}
+.summary .pp .big{font-size:30px;font-weight:700;color:var(--gold);word-break:break-all}
+.warnbox{font-size:13px;color:var(--danger);margin-top:8px}
+
 @media (max-width:560px){
+  .grid3{grid-template-columns:1fr 1fr}
+  .grid3 > :first-child{grid-column:1 / -1}
+  .item{grid-template-columns:1fr 64px 1fr 28px;}
+  .item > .iname{grid-column:1 / 4}
+  .item > .idel{grid-column:4;grid-row:1}
+  .item.head{display:none}
+  .add-item{grid-template-columns:1fr 64px 1fr}
+  .add-item > :first-child{grid-column:1 / -1}
+  .add-item > button{grid-column:1 / -1}
+  .summary .pp .big{font-size:26px}
   .conv{grid-template-columns:1fr;}
   .swap{justify-self:center;transform:rotate(90deg)}
   .rate-row{grid-template-columns:1fr 96px 96px 28px;gap:6px}
@@ -108,6 +150,68 @@ dialog::backdrop{background:rgba(10,20,30,.45)}
 </header>
 
 <main class="wrap">
+  <nav class="tabs">
+    <button class="tab on" data-view="rates">💱 อัตราแลกเปลี่ยน</button>
+    <button class="tab" data-view="projects">🧾 โปรเจกต์</button>
+  </nav>
+
+  <!-- ===== Projects view ===== -->
+  <div id="viewProjects" hidden>
+    <div id="projList">
+      <section class="card">
+        <h2><span>โปรเจกต์ของฉัน</span><button class="btn primary small" id="newProj">＋ สร้างโปรเจกต์</button></h2>
+        <p class="note" style="margin:0">ใส่รายการค่าใช้จ่ายได้หลายสกุลเงิน แอปจะแปลงด้วยเรทของคุณ แล้วหารตามจำนวนคน</p>
+      </section>
+      <div id="projCards"></div>
+    </div>
+
+    <div id="projDetail" hidden>
+      <div style="margin-bottom:10px"><button class="btn small" id="projBack">‹ กลับไปรายการโปรเจกต์</button></div>
+      <section class="card">
+        <label for="pName">ชื่อโปรเจกต์</label>
+        <input type="text" id="pName" class="title-in" placeholder="เช่น ทริปญี่ปุ่น, สั่งของจีนรวมกัน">
+        <div class="grid3" style="margin-top:12px">
+          <div><label for="pCur">สรุปยอดเป็นสกุล</label><select id="pCur"></select></div>
+          <div><label>จำนวนคน</label>
+            <div class="stepper"><button id="pMinus" aria-label="ลดคน">−</button><input type="number" id="pPeople" min="1" step="1" inputmode="numeric"><button id="pPlus" aria-label="เพิ่มคน">＋</button></div>
+          </div>
+          <div><label for="pRound">ปัดเศษต่อคน</label>
+            <select id="pRound">
+              <option value="0">ไม่ปัด</option>
+              <option value="1">ปัดขึ้นเป็นจำนวนเต็ม</option>
+              <option value="5">ปัดขึ้นทีละ 5</option>
+              <option value="10">ปัดขึ้นทีละ 10</option>
+              <option value="100">ปัดขึ้นทีละ 100</option>
+            </select>
+          </div>
+        </div>
+      </section>
+
+      <section class="card">
+        <h2>รายการ</h2>
+        <div class="item head"><span>ชื่อรายการ</span><span style="text-align:right">ราคา/หน่วย</span><span style="text-align:right">จำนวน</span><span>สกุลเงิน</span><span></span></div>
+        <div id="items"></div>
+        <form class="add-item" id="addItem" autocomplete="off">
+          <input type="text" id="iName" placeholder="ชื่อรายการ เช่น ค่าโรงแรม">
+          <input type="number" id="iPrice" step="any" min="0" inputmode="decimal" placeholder="ราคา/หน่วย" style="text-align:right" aria-label="ราคา">
+          <input type="number" id="iQty" step="any" min="0" inputmode="decimal" value="1" placeholder="จำนวน" style="text-align:right" aria-label="จำนวน">
+          <select id="iCur" aria-label="สกุลเงิน"></select>
+          <button class="btn primary" type="submit">＋ เพิ่ม</button>
+        </form>
+      </section>
+
+      <section class="card summary" id="summary"></section>
+
+      <div class="toolbar">
+        <button class="btn" id="pCopy">📋 คัดลอกสรุปไปส่ง LINE</button>
+        <button class="btn" id="pDup">⧉ ทำสำเนา</button>
+        <button class="btn danger" id="pDel">🗑 ลบโปรเจกต์</button>
+      </div>
+    </div>
+  </div>
+
+  <!-- ===== Rates view ===== -->
+  <div id="viewRates">
   <!-- Converter -->
   <section class="card">
     <h2>แปลงสกุลเงิน</h2>
@@ -155,7 +259,7 @@ dialog::backdrop{background:rgba(10,20,30,.45)}
   <!-- Backup -->
   <section class="card">
     <h2>สำรอง / ย้ายข้อมูล</h2>
-    <p class="note" style="margin-top:0">เรทเก็บไว้ในเบราว์เซอร์เครื่องนี้ ใช้ไฟล์ JSON เพื่อสำรองหรือย้ายไปเครื่องอื่น</p>
+    <p class="note" style="margin-top:0">เรทและโปรเจกต์เก็บไว้ในเบราว์เซอร์เครื่องนี้ ใช้ไฟล์ JSON เพื่อสำรองหรือย้ายไปเครื่องอื่น</p>
     <div class="toolbar">
       <button class="btn" id="exportBtn">⬇ ส่งออก JSON</button>
       <button class="btn" id="importBtn">⬆ นำเข้า JSON</button>
@@ -163,6 +267,7 @@ dialog::backdrop{background:rgba(10,20,30,.45)}
       <input type="file" id="importFile" accept="application/json,.json" hidden>
     </div>
   </section>
+  </div>
 </main>
 
 <dialog id="dlg">
@@ -389,7 +494,7 @@ $("dlgList").addEventListener("click", e => { const p = e.target.closest(".pick"
 
 /* backup */
 $("exportBtn").addEventListener("click", () => {
-  const blob = new Blob([JSON.stringify({app:"my-exchange-rate",version:1,exported:new Date().toISOString(),base:S.base,rates:S.rates},null,2)],{type:"application/json"});
+  const blob = new Blob([JSON.stringify({app:"my-exchange-rate",version:2,exported:new Date().toISOString(),base:S.base,rates:S.rates,projects:S.projects},null,2)],{type:"application/json"});
   const a = document.createElement("a");
   a.href = URL.createObjectURL(blob);
   a.download = `exchange-rates-${new Date().toISOString().slice(0,10)}.json`;
@@ -401,8 +506,11 @@ $("importFile").addEventListener("change", async e => {
   try{
     const d = JSON.parse(await f.text());
     if (!d.base || typeof d.rates !== "object") throw 0;
-    if (!confirm(`นำเข้า ${Object.keys(d.rates).length} สกุลเงิน (สกุลหลัก ${d.base}) แทนเรทปัจจุบัน?`)) return;
-    S.base = d.base; S.rates = d.rates; save(); renderAll(); toast("นำเข้าเรียบร้อย");
+    const np = Array.isArray(d.projects) ? d.projects.length : 0;
+    if (!confirm(`นำเข้า ${Object.keys(d.rates).length} สกุลเงิน (สกุลหลัก ${d.base})${np?` และ ${np} โปรเจกต์`:""} แทนข้อมูลปัจจุบัน?`)) return;
+    S.base = d.base; S.rates = d.rates;
+    if (np) S.projects = d.projects;
+    save(); renderAll(); renderProjects(); toast("นำเข้าเรียบร้อย");
   }catch(err){ alert("ไฟล์ไม่ถูกต้อง"); }
   e.target.value = "";
 });
@@ -431,7 +539,179 @@ $("themeBtn").addEventListener("click", () => {
 let tt;
 function toast(m){ const el=$("toast"); el.textContent=m; el.classList.add("show"); clearTimeout(tt); tt=setTimeout(()=>el.classList.remove("show"),1800); }
 
+/* ================= PROJECTS ================= */
+if (!Array.isArray(S.projects)) S.projects = [];
+const esc = s => String(s ?? "").replace(/[&<>"']/g, ch => ({"&":"&amp;","<":"&lt;",">":"&gt;",'"':"&quot;","'":"&#39;"}[ch]));
+const uid = () => Date.now().toString(36) + Math.random().toString(36).slice(2,6);
+let curProj = null;
+const P = () => S.projects.find(p => p.id === curProj);
+
+function curOptions(selected){
+  const list = available();
+  if (selected && !list.includes(selected)) list.push(selected);
+  return list.map(c => `<option value="${c}"${c===selected?" selected":""}>${flag(c)} ${c}</option>`).join("");
+}
+/* convert amount from currency a to currency b with mid rates */
+function conv(amount, a, b){
+  if (a === b) return amount;
+  const ra = inBase(a,"mid"), rb = inBase(b,"mid");
+  if (!ra || !rb) return null;
+  return amount * ra / rb;
+}
+function calc(p){
+  let total = 0; const missing = new Set();
+  const lines = p.items.map(it => {
+    const sub = (parseFloat(it.price)||0) * (parseFloat(it.qty)||0);
+    const v = conv(sub, it.cur, p.cur);
+    if (v == null) missing.add(it.cur); else total += v;
+    return {sub, v};
+  });
+  const people = Math.max(1, parseInt(p.people)||1);
+  const raw = total / people;
+  const step = parseFloat(p.round)||0;
+  const per = step ? Math.ceil(raw/step - 1e-9)*step : raw;
+  return {lines, total, people, raw, per, missing:[...missing], collected: per*people};
+}
+
+function renderProjects(){
+  const box = $("projCards");
+  if (!S.projects.length){
+    box.innerHTML = `<section class="card empty">ยังไม่มีโปรเจกต์ กด “สร้างโปรเจกต์” เพื่อเริ่ม</section>`;
+    return;
+  }
+  box.innerHTML = S.projects.slice().sort((a,b)=>(b.t||0)-(a.t||0)).map(p => {
+    const c = calc(p);
+    return `<section class="card proj-card" data-id="${p.id}">
+      <div class="pi"><b>${esc(p.name)||"ไม่มีชื่อ"}</b><small>${p.items.length} รายการ · ${c.people} คน · รวม ${fmt(c.total,p.cur)}</small></div>
+      <div class="pp"><small>คนละ</small><b>${fmt(c.per,p.cur)}</b></div>
+    </section>`;
+  }).join("");
+}
+
+function openProject(id){
+  curProj = id; const p = P(); if (!p) return;
+  $("projList").hidden = true; $("projDetail").hidden = false;
+  $("pName").value = p.name || "";
+  $("pCur").innerHTML = curOptions(p.cur);
+  $("pPeople").value = p.people;
+  $("pRound").value = String(p.round||0);
+  $("iCur").innerHTML = curOptions(p.lastCur || p.cur);
+  renderItems(); window.scrollTo({top:0});
+}
+function closeProject(){ curProj = null; $("projDetail").hidden = true; $("projList").hidden = false; renderProjects(); }
+function touch(){ const p=P(); if(p){ p.t = Date.now(); } save(); }
+
+function renderItems(){
+  const p = P(); if (!p) return;
+  const c = calc(p);
+  $("items").innerHTML = p.items.length ? p.items.map((it,i) => {
+    const l = c.lines[i];
+    const convTxt = l.v == null ? `⚠ ยังไม่มีเรท ${it.cur} — ไม่ถูกนับรวม`
+      : `${it.cur!==p.cur ? fmt(l.sub,it.cur)+" ≈ " : ""}${fmt(l.v,p.cur)}`;
+    return `<div class="item" data-i="${i}">
+      <input class="iname" type="text" data-k="name" value="${esc(it.name)}" placeholder="ชื่อรายการ">
+      <input type="number" data-k="price" step="any" min="0" inputmode="decimal" value="${esc(it.price)}" style="text-align:right" aria-label="ราคา">
+      <input type="number" data-k="qty" step="any" min="0" inputmode="decimal" value="${esc(it.qty)}" style="text-align:right" aria-label="จำนวน">
+      <select data-k="cur" aria-label="สกุลเงิน">${curOptions(it.cur)}</select>
+      <button class="btn ghost small danger idel" data-del="${i}" title="ลบรายการ">✕</button>
+      <div class="conv-amt${l.v==null?" warn":""}">${convTxt}</div>
+    </div>`;
+  }).join("") : `<div class="empty">ยังไม่มีรายการ เพิ่มด้านล่างได้เลย</div>`;
+  renderSummary(c);
+}
+function renderSummary(c){
+  const p = P(); if (!p) return;
+  c = c || calc(p);
+  const rounded = parseFloat(p.round)||0;
+  $("summary").innerHTML = `
+    <div class="row"><span>ยอดรวม (${p.items.length} รายการ)</span><b>${fmt(c.total,p.cur)}</b></div>
+    <div class="row"><span>หาร</span><b>${c.people} คน</b></div>
+    ${rounded && Math.abs(c.per-c.raw)>1e-9 ? `<div class="row"><span>ก่อนปัดเศษ</span><b>${fmt(c.raw,p.cur)}</b></div>
+      <div class="row"><span>เก็บได้รวม / เกินยอดจริง</span><b>${fmt(c.collected,p.cur)} / +${fmt(c.collected-c.total,p.cur)}</b></div>` : ""}
+    <div class="pp"><div style="font-size:13px;opacity:.8">แต่ละคนต้องจ่าย</div><div class="big">${fmt(c.per,p.cur)}</div></div>
+    ${c.missing.length ? `<div class="warnbox" style="color:#ffb4b4">⚠ ไม่มีเรทสำหรับ ${c.missing.join(", ")} — ไปเพิ่มที่แท็บอัตราแลกเปลี่ยน</div>` : ""}`;
+}
+function refreshCalc(){
+  const p = P(); if (!p) return;
+  const c = calc(p);
+  document.querySelectorAll("#items .item[data-i]").forEach(row => {
+    const i = +row.dataset.i, it = p.items[i], l = c.lines[i], el = row.querySelector(".conv-amt");
+    el.classList.toggle("warn", l.v==null);
+    el.textContent = l.v == null ? `⚠ ยังไม่มีเรท ${it.cur} — ไม่ถูกนับรวม`
+      : `${it.cur!==p.cur ? fmt(l.sub,it.cur)+" ≈ " : ""}${fmt(l.v,p.cur)}`;
+  });
+  renderSummary(c);
+}
+
+$("newProj").addEventListener("click", () => {
+  const p = {id:uid(), name:"", cur:S.base, people:2, round:0, items:[], t:Date.now()};
+  S.projects.push(p); save(); openProject(p.id); $("pName").focus();
+});
+$("projCards").addEventListener("click", e => { const c = e.target.closest(".proj-card"); if (c) openProject(c.dataset.id); });
+$("projBack").addEventListener("click", closeProject);
+$("pName").addEventListener("input", e => { P().name = e.target.value; touch(); });
+$("pCur").addEventListener("change", e => { P().cur = e.target.value; touch(); renderItems(); });
+$("pRound").addEventListener("change", e => { P().round = +e.target.value; touch(); renderSummary(); });
+function setPeople(n){ n = Math.max(1, Math.min(999, parseInt(n)||1)); P().people = n; $("pPeople").value = n; touch(); renderSummary(); }
+$("pPeople").addEventListener("change", e => setPeople(e.target.value));
+$("pPeople").addEventListener("input", e => { if (parseInt(e.target.value)>=1){ P().people = parseInt(e.target.value); touch(); renderSummary(); } });
+$("pMinus").addEventListener("click", () => setPeople((P().people||1)-1));
+$("pPlus").addEventListener("click", () => setPeople((P().people||1)+1));
+
+$("addItem").addEventListener("submit", e => {
+  e.preventDefault();
+  const p = P(), price = parseFloat($("iPrice").value);
+  if (!isFinite(price)){ $("iPrice").focus(); toast("ใส่ราคาก่อน"); return; }
+  const qty = parseFloat($("iQty").value);
+  p.items.push({id:uid(), name:$("iName").value.trim() || `รายการ ${p.items.length+1}`, price, qty: isFinite(qty)?qty:1, cur:$("iCur").value});
+  p.lastCur = $("iCur").value;
+  touch(); renderItems();
+  $("iName").value=""; $("iPrice").value=""; $("iQty").value="1"; $("iName").focus();
+});
+$("items").addEventListener("input", e => {
+  const el = e.target.closest("[data-k]"); if (!el) return;
+  const it = P().items[+el.closest(".item").dataset.i], k = el.dataset.k;
+  it[k] = (k==="price"||k==="qty") ? (el.value===""?"":parseFloat(el.value)) : el.value;
+  touch(); refreshCalc();
+});
+$("items").addEventListener("change", e => { if (e.target.matches("select[data-k]")) refreshCalc(); });
+$("items").addEventListener("click", e => {
+  const b = e.target.closest("[data-del]"); if (!b) return;
+  P().items.splice(+b.dataset.del,1); touch(); renderItems();
+});
+$("pDel").addEventListener("click", () => {
+  const p = P(); if (!confirm(`ลบโปรเจกต์ “${p.name||"ไม่มีชื่อ"}” ?`)) return;
+  S.projects = S.projects.filter(x => x.id !== p.id); save(); closeProject(); toast("ลบโปรเจกต์แล้ว");
+});
+$("pDup").addEventListener("click", () => {
+  const p = JSON.parse(JSON.stringify(P())); p.id = uid(); p.name = (p.name||"โปรเจกต์") + " (สำเนา)"; p.t = Date.now();
+  S.projects.push(p); save(); openProject(p.id); toast("ทำสำเนาแล้ว");
+});
+$("pCopy").addEventListener("click", async () => {
+  const p = P(), c = calc(p);
+  const lines = p.items.map((it,i) => {
+    const l = c.lines[i];
+    const q = parseFloat(it.qty)!==1 ? ` × ${it.qty}` : "";
+    return `• ${it.name}: ${fmt(parseFloat(it.price)||0,it.cur)}${q}${it.cur!==p.cur && l.v!=null ? ` (≈ ${fmt(l.v,p.cur)})` : ""}`;
+  });
+  const text = `🧾 ${p.name||"โปรเจกต์"}\n${lines.join("\n")}\n────────\nรวม ${fmt(c.total,p.cur)}\nหาร ${c.people} คน\n👉 คนละ ${fmt(c.per,p.cur)}`;
+  try{ await navigator.clipboard.writeText(text); toast("คัดลอกแล้ว"); }
+  catch(e){ prompt("คัดลอกข้อความนี้", text); }
+});
+
+/* tabs */
+function showView(v){
+  S.view = v; save();
+  document.querySelectorAll(".tab").forEach(t => t.classList.toggle("on", t.dataset.view===v));
+  $("viewRates").hidden = v !== "rates";
+  $("viewProjects").hidden = v !== "projects";
+  if (v === "projects"){ if (P()) openProject(curProj); else closeProject(); }
+  else renderAll();
+}
+document.querySelectorAll(".tab").forEach(t => t.addEventListener("click", () => showView(t.dataset.view)));
+
 renderAll();
+showView(S.view === "projects" ? "projects" : "rates");
 })();
 </script>
 </body>
