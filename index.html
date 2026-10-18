@@ -1,0 +1,438 @@
+<!doctype html>
+<html lang="th">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>My Exchange Rate</title>
+<meta name="theme-color" content="#19456f">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Noto+Sans+Thai:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+:root{
+  --bg:#f4f6f9; --card:#ffffff; --ink:#1d2733; --muted:#818183; --line:#e3e7ee;
+  --brand:#19456f; --accent:#3d9dff; --accent-soft:#eaf4ff; --gold:#ffd700;
+  --danger:#c94545; --ok:#2e8b57; --radius:14px;
+}
+@media (prefers-color-scheme: dark){
+  :root:not([data-theme="light"]){
+    --bg:#0f1720; --card:#17212c; --ink:#e7edf4; --muted:#9aa3ad; --line:#26323f;
+    --brand:#7fb6ea; --accent:#5aaeff; --accent-soft:#1b2c40;
+  }
+}
+:root[data-theme="dark"]{
+  --bg:#0f1720; --card:#17212c; --ink:#e7edf4; --muted:#9aa3ad; --line:#26323f;
+  --brand:#7fb6ea; --accent:#5aaeff; --accent-soft:#1b2c40;
+}
+*{box-sizing:border-box}
+html,body{margin:0}
+body{background:var(--bg);color:var(--ink);font-family:"Noto Sans Thai",system-ui,sans-serif;font-size:15px;line-height:1.5;-webkit-font-smoothing:antialiased}
+header{background:#19456f;color:#fff;padding:18px 16px 54px}
+header .wrap{display:flex;align-items:center;justify-content:space-between;gap:12px}
+header h1{margin:0;font-size:20px;font-weight:700;letter-spacing:.2px}
+header p{margin:2px 0 0;font-size:13px;opacity:.75}
+.wrap{max-width:760px;margin:0 auto}
+main{padding:0 16px 48px;margin-top:-40px}
+.card{background:var(--card);border:1px solid var(--line);border-radius:var(--radius);padding:16px;margin-bottom:14px;box-shadow:0 1px 2px rgba(0,0,0,.04)}
+.card h2{margin:0 0 12px;font-size:16px;font-weight:600;color:var(--brand);display:flex;align-items:center;justify-content:space-between;gap:8px}
+label{display:block;font-size:12px;color:var(--muted);margin-bottom:4px}
+input,select,button{font:inherit;color:inherit}
+input[type=number],input[type=text],input[type=search],select{
+  width:100%;padding:10px 12px;border:1px solid var(--line);border-radius:10px;background:var(--card);outline:none;min-height:44px}
+input:focus,select:focus{border-color:var(--accent);box-shadow:0 0 0 3px var(--accent-soft)}
+.btn{border:1px solid var(--line);background:var(--card);border-radius:10px;padding:9px 14px;cursor:pointer;min-height:40px;display:inline-flex;align-items:center;gap:6px;justify-content:center}
+.btn:hover{border-color:var(--accent)}
+.btn.primary{background:var(--accent);border-color:var(--accent);color:#fff;font-weight:600}
+.btn.small{padding:5px 10px;min-height:32px;font-size:13px}
+.btn.ghost{border-color:transparent;background:transparent}
+.btn.danger{color:var(--danger)}
+.icon-btn{border:0;background:rgba(255,255,255,.14);color:#fff;border-radius:10px;width:40px;height:40px;cursor:pointer;font-size:18px}
+
+/* converter */
+.conv{display:grid;grid-template-columns:1fr auto 1fr;gap:10px;align-items:end}
+.swap{width:44px;height:44px;border-radius:50%;border:1px solid var(--line);background:var(--accent-soft);color:var(--accent);cursor:pointer;font-size:18px}
+.result{margin-top:14px;padding:14px;border-radius:12px;background:var(--accent-soft)}
+.result .big{font-size:28px;font-weight:700;color:var(--brand);word-break:break-all}
+.result .sub{font-size:13px;color:var(--muted)}
+.mode{display:flex;gap:6px;margin-top:12px;flex-wrap:wrap}
+.chip{border:1px solid var(--line);border-radius:999px;padding:5px 12px;font-size:13px;cursor:pointer;background:var(--card)}
+.chip.on{background:var(--brand);border-color:var(--brand);color:#fff}
+:root[data-theme="dark"] .chip.on{color:#0f1720}
+@media (prefers-color-scheme: dark){:root:not([data-theme="light"]) .chip.on{color:#0f1720}}
+
+/* rates table */
+.toolbar{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:10px}
+.toolbar input{flex:1;min-width:160px}
+.rate-row{display:grid;grid-template-columns:1fr 110px 110px 36px;gap:8px;align-items:center;padding:10px 0;border-top:1px solid var(--line)}
+.rate-row.head{border-top:0;padding-top:0;font-size:12px;color:var(--muted)}
+.cur{display:flex;align-items:center;gap:10px;min-width:0}
+.flag{font-size:22px;width:28px;text-align:center;flex:none}
+.cur b{font-weight:600}
+.cur small{display:block;color:var(--muted);font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+.rate-row input{min-height:38px;padding:7px 9px;text-align:right}
+.meta{font-size:12px;color:var(--muted);margin-top:8px}
+.empty{color:var(--muted);text-align:center;padding:24px 8px}
+.base-line{display:flex;gap:10px;align-items:center;flex-wrap:wrap;font-size:14px}
+.base-line select{width:auto;min-width:180px}
+.note{font-size:12px;color:var(--muted)}
+
+/* dialog */
+dialog{border:0;border-radius:16px;padding:0;width:min(520px,calc(100vw - 32px));background:var(--card);color:var(--ink)}
+dialog::backdrop{background:rgba(10,20,30,.45)}
+.dlg-h{padding:14px 16px;border-bottom:1px solid var(--line);display:flex;justify-content:space-between;align-items:center}
+.dlg-b{padding:12px 16px;max-height:60vh;overflow:auto}
+.pick{display:flex;align-items:center;gap:10px;padding:9px 6px;border-radius:10px;cursor:pointer}
+.pick:hover{background:var(--accent-soft)}
+.pick .added{margin-left:auto;font-size:12px;color:var(--ok)}
+.toast{position:fixed;left:50%;bottom:24px;transform:translateX(-50%);background:#19456f;color:#fff;padding:10px 16px;border-radius:10px;font-size:14px;opacity:0;pointer-events:none;transition:opacity .2s}
+.toast.show{opacity:1}
+
+@media (max-width:560px){
+  .conv{grid-template-columns:1fr;}
+  .swap{justify-self:center;transform:rotate(90deg)}
+  .rate-row{grid-template-columns:1fr 96px 96px 28px;gap:6px}
+  .rate-row input{padding:7px 6px;font-size:14px}
+  .cur small{max-width:110px}
+  .result .big{font-size:24px}
+}
+</style>
+</head>
+<body>
+<header>
+  <div class="wrap">
+    <div>
+      <h1>💱 My Exchange Rate</h1>
+      <p>อัตราแลกเปลี่ยนที่เรากำหนดเอง</p>
+    </div>
+    <button class="icon-btn" id="themeBtn" title="สลับโหมดสว่าง/มืด">◐</button>
+  </div>
+</header>
+
+<main class="wrap">
+  <!-- Converter -->
+  <section class="card">
+    <h2>แปลงสกุลเงิน</h2>
+    <div style="margin-bottom:10px">
+      <label for="amount">จำนวนเงิน</label>
+      <input type="number" id="amount" inputmode="decimal" value="100" min="0" step="any">
+    </div>
+    <div class="conv">
+      <div><label for="from">จาก</label><select id="from"></select></div>
+      <button class="swap" id="swap" title="สลับ">⇄</button>
+      <div><label for="to">เป็น</label><select id="to"></select></div>
+    </div>
+    <div class="mode" id="mode">
+      <span class="chip on" data-m="mid">เรทกลาง</span>
+      <span class="chip" data-m="buy">เรทซื้อ</span>
+      <span class="chip" data-m="sell">เรทขาย</span>
+    </div>
+    <div class="result">
+      <div class="big" id="out">–</div>
+      <div class="sub" id="outSub"></div>
+    </div>
+  </section>
+
+  <!-- Rates -->
+  <section class="card">
+    <h2>
+      <span>เรทของฉัน</span>
+      <button class="btn primary small" id="addBtn">＋ เพิ่มสกุลเงิน</button>
+    </h2>
+    <div class="base-line">
+      <span>สกุลเงินหลัก</span>
+      <select id="base"></select>
+    </div>
+    <p class="note" id="baseNote"></p>
+    <div class="toolbar">
+      <input type="search" id="filter" placeholder="ค้นหาในเรทของฉัน…">
+    </div>
+    <div class="rate-row head">
+      <span>สกุลเงิน</span><span style="text-align:right">ซื้อ</span><span style="text-align:right">ขาย</span><span></span>
+    </div>
+    <div id="rates"></div>
+    <div class="meta" id="updated"></div>
+  </section>
+
+  <!-- Backup -->
+  <section class="card">
+    <h2>สำรอง / ย้ายข้อมูล</h2>
+    <p class="note" style="margin-top:0">เรทเก็บไว้ในเบราว์เซอร์เครื่องนี้ ใช้ไฟล์ JSON เพื่อสำรองหรือย้ายไปเครื่องอื่น</p>
+    <div class="toolbar">
+      <button class="btn" id="exportBtn">⬇ ส่งออก JSON</button>
+      <button class="btn" id="importBtn">⬆ นำเข้า JSON</button>
+      <button class="btn" id="copyBtn">📋 คัดลอกเรทเป็นข้อความ</button>
+      <input type="file" id="importFile" accept="application/json,.json" hidden>
+    </div>
+  </section>
+</main>
+
+<dialog id="dlg">
+  <div class="dlg-h">
+    <b>เลือกสกุลเงิน</b>
+    <button class="btn ghost small" id="dlgClose">✕</button>
+  </div>
+  <div style="padding:12px 16px 0"><input type="search" id="dlgSearch" placeholder="พิมพ์รหัสหรือชื่อ เช่น USD, เยน, Euro"></div>
+  <div class="dlg-b" id="dlgList"></div>
+</dialog>
+
+<div class="toast" id="toast"></div>
+
+<script>
+(function(){
+"use strict";
+const KEY = "myExchangeRate.v1";
+
+/* ---------- currency catalogue ---------- */
+const FALLBACK = "AED AFN ALL AMD ANG AOA ARS AUD AWG AZN BAM BBD BDT BGN BHD BIF BMD BND BOB BRL BSD BTN BWP BYN BZD CAD CDF CHF CLP CNY COP CRC CUP CVE CZK DJF DKK DOP DZD EGP ERN ETB EUR FJD FKP GBP GEL GHS GIP GMD GNF GTQ GYD HKD HNL HTG HUF IDR ILS INR IQD IRR ISK JMD JOD JPY KES KGS KHR KMF KPW KRW KWD KYD KZT LAK LBP LKR LRD LSL LYD MAD MDL MGA MKD MMK MNT MOP MRU MUR MVR MWK MXN MYR MZN NAD NGN NIO NOK NPR NZD OMR PAB PEN PGK PHP PKR PLN PYG QAR RON RSD RUB RWF SAR SBD SCR SDG SEK SGD SHP SLE SOS SRD SSP STN SVC SYP SZL THB TJS TMT TND TOP TRY TTD TWD TZS UAH UGX USD UYU UZS VES VND VUV WST XAF XCD XOF XPF YER ZAR ZMW ZWG".split(" ");
+let CODES = FALLBACK;
+try{
+  if (Intl.supportedValuesOf){
+    const s = new Set([...Intl.supportedValuesOf("currency"), ...FALLBACK]);
+    CODES = [...s].sort();
+  }
+}catch(e){}
+
+let dnTh=null, dnEn=null;
+try{ dnTh = new Intl.DisplayNames(["th"],{type:"currency"}); dnEn = new Intl.DisplayNames(["en"],{type:"currency"}); }catch(e){}
+const nameTh = c => { try{ return dnTh ? dnTh.of(c) : c; }catch(e){ return c; } };
+const nameEn = c => { try{ return dnEn ? dnEn.of(c) : c; }catch(e){ return c; } };
+
+const FLAG_OVERRIDE = {EUR:"🇪🇺", ANG:"🇨🇼", XCD:"🇦🇬", XAF:"🌍", XOF:"🌍", XPF:"🇵🇫", BTC:"₿"};
+function flag(code){
+  if (FLAG_OVERRIDE[code]) return FLAG_OVERRIDE[code];
+  if (code[0]==="X") return "💱";
+  const cc = code.slice(0,2).toUpperCase();
+  return String.fromCodePoint(...[...cc].map(ch => 0x1F1E6 + ch.charCodeAt(0) - 65));
+}
+
+/* ---------- state ---------- */
+// rates[code] = {buy, sell, t}  → how many BASE units for 1 unit of code
+const DEFAULT_STATE = {
+  base:"THB",
+  rates:{
+    USD:{buy:32.50, sell:33.10, t:Date.now()},
+    CNY:{buy:4.55,  sell:4.70,  t:Date.now()},
+    EUR:{buy:37.80, sell:38.60, t:Date.now()},
+    JPY:{buy:0.215, sell:0.224, t:Date.now()},
+    KRW:{buy:0.0235,sell:0.0246,t:Date.now()}
+  },
+  from:"USD", to:"THB", amount:100, mode:"mid"
+};
+let S;
+try{ S = JSON.parse(localStorage.getItem(KEY)) || null; }catch(e){ S = null; }
+if (!S || !S.base || !S.rates) S = JSON.parse(JSON.stringify(DEFAULT_STATE));
+const save = () => { try{ localStorage.setItem(KEY, JSON.stringify(S)); }catch(e){} };
+
+const $ = id => document.getElementById(id);
+
+/* ---------- number helpers ---------- */
+function fmt(n, code){
+  if (!isFinite(n)) return "–";
+  const abs = Math.abs(n);
+  const max = abs === 0 ? 2 : abs < 0.01 ? 6 : abs < 1 ? 4 : 2;
+  return n.toLocaleString("th-TH",{minimumFractionDigits: abs>=1?2:0, maximumFractionDigits:max}) + (code?" "+code:"");
+}
+const num = v => { const n = parseFloat(String(v).replace(/,/g,"")); return isFinite(n) && n>0 ? n : null; };
+
+/* value of 1 unit of code, in base units, for a mode */
+function inBase(code, mode){
+  if (code === S.base) return 1;
+  const r = S.rates[code]; if (!r) return null;
+  const b = num(r.buy), s = num(r.sell);
+  if (mode === "buy")  return b ?? s;
+  if (mode === "sell") return s ?? b;
+  if (b && s) return (b+s)/2;
+  return b ?? s;
+}
+
+/* ---------- rendering ---------- */
+function available(){ return [S.base, ...Object.keys(S.rates).filter(c=>c!==S.base).sort()]; }
+
+function fillSelect(sel, list, value){
+  sel.innerHTML = list.map(c => `<option value="${c}">${flag(c)} ${c} · ${nameTh(c)}</option>`).join("");
+  sel.value = list.includes(value) ? value : list[0];
+}
+
+function renderSelectors(){
+  const list = available();
+  fillSelect($("from"), list, S.from);
+  fillSelect($("to"), list, S.to);
+  S.from = $("from").value; S.to = $("to").value;
+  fillSelect($("base"), CODES, S.base);
+  $("baseNote").textContent = `ใส่เรทเป็น "1 หน่วยของสกุลนั้น = กี่ ${S.base}" · ช่องขายเว้นว่างได้`;
+}
+
+function convert(){
+  const amt = num($("amount").value) ?? 0;
+  const f = S.from, t = S.to, m = S.mode;
+  // Money-changer logic: we BUY the foreign currency the customer gives us, and SELL the one they receive.
+  let fRate, tRate;
+  if (m === "buy"){ fRate = inBase(f,"buy"); tRate = inBase(t,"sell"); }
+  else if (m === "sell"){ fRate = inBase(f,"sell"); tRate = inBase(t,"buy"); }
+  else { fRate = inBase(f,"mid"); tRate = inBase(t,"mid"); }
+  if (!fRate || !tRate){ $("out").textContent = "ยังไม่มีเรท"; $("outSub").textContent=""; return; }
+  const res = amt * fRate / tRate;
+  const one = fRate / tRate;
+  $("out").textContent = fmt(res, t);
+  $("outSub").textContent = `${fmt(amt,f)} · 1 ${f} = ${fmt(one,t)} · 1 ${t} = ${fmt(1/one,f)}`;
+}
+
+function renderRates(){
+  const q = $("filter").value.trim().toLowerCase();
+  const codes = Object.keys(S.rates).filter(c=>c!==S.base).sort()
+    .filter(c => !q || c.toLowerCase().includes(q) || nameTh(c).toLowerCase().includes(q) || nameEn(c).toLowerCase().includes(q));
+  const box = $("rates");
+  if (!codes.length){
+    box.innerHTML = `<div class="empty">${q ? "ไม่พบสกุลเงินที่ค้นหา" : "ยังไม่มีเรท กด “เพิ่มสกุลเงิน” เพื่อเริ่ม"}</div>`;
+  } else {
+    box.innerHTML = codes.map(c => {
+      const r = S.rates[c];
+      return `<div class="rate-row" data-c="${c}">
+        <div class="cur"><span class="flag">${flag(c)}</span><div style="min-width:0"><b>${c}</b><small title="${nameEn(c)}">${nameTh(c)}</small></div></div>
+        <input type="number" inputmode="decimal" step="any" min="0" data-k="buy" value="${r.buy ?? ""}" placeholder="0.00" aria-label="${c} ซื้อ">
+        <input type="number" inputmode="decimal" step="any" min="0" data-k="sell" value="${r.sell ?? ""}" placeholder="–" aria-label="${c} ขาย">
+        <button class="btn ghost small danger" data-del="${c}" title="ลบ">✕</button>
+      </div>`;
+    }).join("");
+  }
+  const ts = Object.values(S.rates).map(r=>r.t||0);
+  const last = ts.length ? Math.max(...ts) : 0;
+  $("updated").textContent = last ? "แก้ไขล่าสุด " + new Date(last).toLocaleString("th-TH",{dateStyle:"medium",timeStyle:"short"}) : "";
+}
+
+function renderAll(){ renderSelectors(); renderRates(); convert(); }
+
+/* ---------- events ---------- */
+$("amount").value = S.amount ?? 100;
+$("amount").addEventListener("input", () => { S.amount = $("amount").value; save(); convert(); });
+$("from").addEventListener("change", e => { S.from = e.target.value; save(); convert(); });
+$("to").addEventListener("change", e => { S.to = e.target.value; save(); convert(); });
+$("swap").addEventListener("click", () => { [S.from,S.to]=[S.to,S.from]; $("from").value=S.from; $("to").value=S.to; save(); convert(); });
+document.querySelectorAll("#mode .chip").forEach(ch => {
+  ch.classList.toggle("on", ch.dataset.m === S.mode);
+  ch.addEventListener("click", () => {
+    S.mode = ch.dataset.m; save();
+    document.querySelectorAll("#mode .chip").forEach(x=>x.classList.toggle("on", x===ch));
+    convert();
+  });
+});
+$("filter").addEventListener("input", renderRates);
+
+$("rates").addEventListener("input", e => {
+  const inp = e.target.closest("input[data-k]"); if (!inp) return;
+  const c = inp.closest(".rate-row").dataset.c;
+  const v = inp.value.trim();
+  S.rates[c][inp.dataset.k] = v === "" ? null : parseFloat(v);
+  S.rates[c].t = Date.now();
+  save(); convert();
+  const ts = Object.values(S.rates).map(r=>r.t||0);
+  $("updated").textContent = "แก้ไขล่าสุด " + new Date(Math.max(...ts)).toLocaleString("th-TH",{dateStyle:"medium",timeStyle:"short"});
+});
+$("rates").addEventListener("click", e => {
+  const b = e.target.closest("[data-del]"); if (!b) return;
+  const c = b.dataset.del;
+  if (!confirm(`ลบเรท ${c} ?`)) return;
+  delete S.rates[c]; save(); renderAll(); toast(`ลบ ${c} แล้ว`);
+});
+
+/* change base: convert all stored rates so values stay consistent */
+$("base").addEventListener("change", e => {
+  const nb = e.target.value, ob = S.base;
+  if (nb === ob) return;
+  const k = inBase(nb, "mid"); // value of 1 new-base in old-base units
+  if (!k){
+    if (!confirm(`ยังไม่มีเรท ${nb} เทียบกับ ${ob}\nเปลี่ยนสกุลหลักโดยล้างเรทเดิมหรือไม่?`)){ e.target.value = ob; return; }
+    S.rates = {};
+  } else {
+    const r0 = S.rates[nb] || {};
+    const nr = {};
+    for (const [c,r] of Object.entries(S.rates)){
+      if (c === nb) continue;
+      nr[c] = { buy: r.buy!=null ? +(r.buy/k).toPrecision(8) : null,
+                sell: r.sell!=null ? +(r.sell/k).toPrecision(8) : null, t: Date.now() };
+    }
+    nr[ob] = { buy: num(r0.sell) ? +(1/num(r0.sell)).toPrecision(8) : +(1/k).toPrecision(8),
+               sell: num(r0.buy) ? +(1/num(r0.buy)).toPrecision(8) : null, t:Date.now() };
+    S.rates = nr;
+  }
+  S.base = nb; save(); renderAll(); toast(`สกุลหลักเป็น ${nb} แล้ว`);
+});
+
+/* add currency dialog */
+const dlg = $("dlg");
+function renderPick(){
+  const q = $("dlgSearch").value.trim().toLowerCase();
+  const list = CODES.filter(c => c!==S.base && (!q || c.toLowerCase().includes(q) || nameTh(c).toLowerCase().includes(q) || nameEn(c).toLowerCase().includes(q)));
+  $("dlgList").innerHTML = list.length ? list.map(c => `<div class="pick" data-c="${c}">
+      <span class="flag">${flag(c)}</span><div><b>${c}</b> <small style="color:var(--muted)">${nameTh(c)} · ${nameEn(c)}</small></div>
+      ${S.rates[c] ? '<span class="added">✓ มีแล้ว</span>' : ""}</div>`).join("")
+    : `<div class="empty">ไม่พบ “${q}” — พิมพ์รหัส 3 ตัวแล้วกด Enter เพื่อเพิ่มเอง</div>`;
+}
+function addCode(c){
+  c = c.toUpperCase();
+  if (!/^[A-Z0-9]{2,6}$/.test(c) || c === S.base) return;
+  if (!S.rates[c]) S.rates[c] = {buy:null, sell:null, t:Date.now()};
+  save(); dlg.close(); $("filter").value=""; renderAll();
+  const inp = document.querySelector(`.rate-row[data-c="${c}"] input[data-k="buy"]`);
+  if (inp){ inp.focus(); inp.scrollIntoView({block:"center",behavior:"smooth"}); }
+  toast(`เพิ่ม ${c} แล้ว ใส่เรทได้เลย`);
+}
+$("addBtn").addEventListener("click", () => { $("dlgSearch").value=""; renderPick(); dlg.showModal(); setTimeout(()=>$("dlgSearch").focus(),50); });
+$("dlgClose").addEventListener("click", () => dlg.close());
+dlg.addEventListener("click", e => { if (e.target === dlg) dlg.close(); });
+$("dlgSearch").addEventListener("input", renderPick);
+$("dlgSearch").addEventListener("keydown", e => {
+  if (e.key !== "Enter") return;
+  const first = $("dlgList").querySelector(".pick");
+  addCode(first ? first.dataset.c : $("dlgSearch").value.trim());
+});
+$("dlgList").addEventListener("click", e => { const p = e.target.closest(".pick"); if (p) addCode(p.dataset.c); });
+
+/* backup */
+$("exportBtn").addEventListener("click", () => {
+  const blob = new Blob([JSON.stringify({app:"my-exchange-rate",version:1,exported:new Date().toISOString(),base:S.base,rates:S.rates},null,2)],{type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `exchange-rates-${new Date().toISOString().slice(0,10)}.json`;
+  a.click(); setTimeout(()=>URL.revokeObjectURL(a.href), 1000);
+});
+$("importBtn").addEventListener("click", () => $("importFile").click());
+$("importFile").addEventListener("change", async e => {
+  const f = e.target.files[0]; if (!f) return;
+  try{
+    const d = JSON.parse(await f.text());
+    if (!d.base || typeof d.rates !== "object") throw 0;
+    if (!confirm(`นำเข้า ${Object.keys(d.rates).length} สกุลเงิน (สกุลหลัก ${d.base}) แทนเรทปัจจุบัน?`)) return;
+    S.base = d.base; S.rates = d.rates; save(); renderAll(); toast("นำเข้าเรียบร้อย");
+  }catch(err){ alert("ไฟล์ไม่ถูกต้อง"); }
+  e.target.value = "";
+});
+$("copyBtn").addEventListener("click", async () => {
+  const d = new Date().toLocaleDateString("th-TH",{dateStyle:"long"});
+  const lines = Object.keys(S.rates).sort().map(c => {
+    const r = S.rates[c];
+    return `${flag(c)} ${c}  ซื้อ ${r.buy ?? "-"}  ขาย ${r.sell ?? "-"}`;
+  });
+  const text = `อัตราแลกเปลี่ยน (${S.base}) ${d}\n` + lines.join("\n");
+  try{ await navigator.clipboard.writeText(text); toast("คัดลอกแล้ว"); }
+  catch(e){ prompt("คัดลอกข้อความนี้", text); }
+});
+
+/* theme */
+try{ const t = localStorage.getItem(KEY+".theme"); if (t) document.documentElement.dataset.theme = t; }catch(e){}
+$("themeBtn").addEventListener("click", () => {
+  const dark = document.documentElement.dataset.theme
+    ? document.documentElement.dataset.theme === "dark"
+    : matchMedia("(prefers-color-scheme: dark)").matches;
+  const t = dark ? "light" : "dark";
+  document.documentElement.dataset.theme = t;
+  try{ localStorage.setItem(KEY+".theme", t); }catch(e){}
+});
+
+let tt;
+function toast(m){ const el=$("toast"); el.textContent=m; el.classList.add("show"); clearTimeout(tt); tt=setTimeout(()=>el.classList.remove("show"),1800); }
+
+renderAll();
+})();
+</script>
+</body>
+</html>
