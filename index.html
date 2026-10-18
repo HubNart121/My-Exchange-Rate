@@ -116,6 +116,13 @@ dialog::backdrop{background:rgba(10,20,30,.45)}
 .summary .row{display:flex;justify-content:space-between;gap:10px;font-size:14px;opacity:.85;padding:2px 0}
 .summary .pp{margin-top:10px;padding-top:10px;border-top:1px solid rgba(255,255,255,.2)}
 .summary .pp .big{font-size:30px;font-weight:700;color:var(--gold);word-break:break-all}
+.prate{display:grid;grid-template-columns:auto auto minmax(70px,180px) 1fr 28px;gap:8px;align-items:center;padding:8px 0;border-top:1px solid var(--line)}
+.prate > span{white-space:nowrap}
+.prate > span:nth-child(4){display:flex;flex-wrap:wrap;gap:2px 6px;align-items:center}
+@media (max-width:560px){.prate > span:nth-child(4){flex-direction:column;align-items:flex-start}}
+.prate input{min-height:38px;padding:7px 9px;text-align:right}
+.prate .tag{font-size:11px;border-radius:999px;padding:2px 8px;background:var(--accent-soft);color:var(--accent);white-space:nowrap}
+.prate .tag.own{background:#fff4c2;color:#8a6d00}
 .warnbox{font-size:13px;color:var(--danger);margin-top:8px}
 
 @media (max-width:560px){
@@ -198,6 +205,12 @@ dialog::backdrop{background:rgba(10,20,30,.45)}
           <select id="iCur" aria-label="สกุลเงิน"></select>
           <button class="btn primary" type="submit">＋ เพิ่ม</button>
         </form>
+      </section>
+
+      <section class="card" id="pRatesCard" hidden>
+        <h2>อัตราแลกเปลี่ยนที่ใช้ในโปรเจกต์</h2>
+        <p class="note" style="margin-top:-6px">ค่าเริ่มต้นใช้เรทกลางจากแท็บอัตราแลกเปลี่ยน แก้เป็นเรทเฉพาะโปรเจกต์นี้ได้ (เช่น เรทที่แลกจริง)</p>
+        <div id="pRates"></div>
       </section>
 
       <section class="card summary" id="summary"></section>
@@ -560,11 +573,46 @@ function conv(amount, a, b){
   if (!ra || !rb) return null;
   return amount * ra / rb;
 }
+/* rate of 1 unit of cur in project currency: project override, else my mid rate */
+function projRate(p, cur){
+  if (cur === p.cur) return 1;
+  const ov = p.rates ? num(p.rates[cur]) : null;
+  return ov ?? conv(1, cur, p.cur);
+}
+const usedCurs = p => [...new Set(p.items.map(it => it.cur))].filter(c => c !== p.cur).sort();
+let pRatesKey = "";
+function renderProjRates(force){
+  const p = P(); if (!p) return;
+  const list = usedCurs(p), key = p.cur + "|" + list.join(",");
+  $("pRatesCard").hidden = !list.length;
+  if (!force && key === pRatesKey) return updateRateTags();
+  pRatesKey = key;
+  $("pRates").innerHTML = list.map(c => {
+    const own = p.rates && num(p.rates[c]) != null, g = conv(1, c, p.cur);
+    return `<div class="prate" data-c="${c}">
+      <span class="flag">${flag(c)}</span>
+      <span>1 <b>${c}</b> =</span>
+      <input type="number" step="any" min="0" inputmode="decimal" value="${own ? p.rates[c] : ""}" placeholder="${g!=null ? +g.toPrecision(6) : "ใส่เรท"}" aria-label="เรท ${c}">
+      <span>${p.cur} <span class="tag${own?" own":""}">${own ? "กำหนดเอง" : g!=null ? "เรทของฉัน" : "ไม่มีเรท"}</span></span>
+      <button class="btn ghost small" data-reset="${c}" title="กลับไปใช้เรทของฉัน"${own?"":" hidden"}>↺</button>
+    </div>`;
+  }).join("");
+}
+function updateRateTags(){
+  const p = P();
+  document.querySelectorAll("#pRates .prate").forEach(row => {
+    const c = row.dataset.c, own = p.rates && num(p.rates[c]) != null, g = conv(1, c, p.cur);
+    const tag = row.querySelector(".tag");
+    tag.className = "tag" + (own ? " own" : ""); tag.textContent = own ? "กำหนดเอง" : g!=null ? "เรทของฉัน" : "ไม่มีเรท";
+    row.querySelector("[data-reset]").hidden = !own;
+  });
+}
 function calc(p){
   let total = 0; const missing = new Set();
   const lines = p.items.map(it => {
     const sub = (parseFloat(it.price)||0) * (parseFloat(it.qty)||0);
-    const v = conv(sub, it.cur, p.cur);
+    const r = projRate(p, it.cur);
+    const v = r == null ? null : sub * r;
     if (v == null) missing.add(it.cur); else total += v;
     return {sub, v};
   });
@@ -619,6 +667,7 @@ function renderItems(){
       <div class="conv-amt${l.v==null?" warn":""}">${convTxt}</div>
     </div>`;
   }).join("") : `<div class="empty">ยังไม่มีรายการ เพิ่มด้านล่างได้เลย</div>`;
+  renderProjRates(true);
   renderSummary(c);
 }
 function renderSummary(c){
@@ -642,6 +691,7 @@ function refreshCalc(){
     el.textContent = l.v == null ? `⚠ ยังไม่มีเรท ${it.cur} — ไม่ถูกนับรวม`
       : `${it.cur!==p.cur ? fmt(l.sub,it.cur)+" ≈ " : ""}${fmt(l.v,p.cur)}`;
   });
+  renderProjRates();
   renderSummary(c);
 }
 
@@ -652,7 +702,27 @@ $("newProj").addEventListener("click", () => {
 $("projCards").addEventListener("click", e => { const c = e.target.closest(".proj-card"); if (c) openProject(c.dataset.id); });
 $("projBack").addEventListener("click", closeProject);
 $("pName").addEventListener("input", e => { P().name = e.target.value; touch(); });
-$("pCur").addEventListener("change", e => { P().cur = e.target.value; touch(); renderItems(); });
+$("pCur").addEventListener("change", e => {
+  const p = P();
+  if (p.rates && Object.keys(p.rates).length){
+    if (!confirm(`เปลี่ยนสกุลสรุปยอดเป็น ${e.target.value} จะล้างเรทที่กำหนดเองในโปรเจกต์นี้ ดำเนินการต่อ?`)){ e.target.value = p.cur; return; }
+    p.rates = {};
+  }
+  p.cur = e.target.value; touch(); renderItems();
+});
+$("pRates").addEventListener("input", e => {
+  const inp = e.target.closest("input"); if (!inp) return;
+  const p = P(), c = inp.closest(".prate").dataset.c;
+  p.rates = p.rates || {};
+  if (num(inp.value) != null) p.rates[c] = parseFloat(inp.value); else delete p.rates[c];
+  touch(); refreshCalc();
+});
+$("pRates").addEventListener("click", e => {
+  const b = e.target.closest("[data-reset]"); if (!b) return;
+  const p = P(); delete p.rates[b.dataset.reset];
+  b.closest(".prate").querySelector("input").value = "";
+  touch(); refreshCalc();
+});
 $("pRound").addEventListener("change", e => { P().round = +e.target.value; touch(); renderSummary(); });
 function setPeople(n){ n = Math.max(1, Math.min(999, parseInt(n)||1)); P().people = n; $("pPeople").value = n; touch(); renderSummary(); }
 $("pPeople").addEventListener("change", e => setPeople(e.target.value));
@@ -696,7 +766,8 @@ $("pCopy").addEventListener("click", async () => {
     const q = parseFloat(it.qty)!==1 ? ` × ${it.qty}` : "";
     return `• ${it.name}: ${fmt(parseFloat(it.price)||0,it.cur)}${q}${it.cur!==p.cur && l.v!=null ? ` (≈ ${fmt(l.v,p.cur)})` : ""}`;
   });
-  const text = `🧾 ${p.name||"โปรเจกต์"}\n${lines.join("\n")}\n────────\nรวม ${fmt(c.total,p.cur)}\nหาร ${c.people} คน\n👉 คนละ ${fmt(c.per,p.cur)}`;
+  const rl = usedCurs(p).map(cu => { const r = projRate(p, cu); return `1 ${cu} = ${r!=null ? fmt(r,p.cur) : "ไม่มีเรท"}`; });
+  const text = `🧾 ${p.name||"โปรเจกต์"}\n${lines.join("\n")}${rl.length ? "\n💱 เรท: " + rl.join(", ") : ""}\n────────\nรวม ${fmt(c.total,p.cur)}\nหาร ${c.people} คน\n👉 คนละ ${fmt(c.per,p.cur)}`;
   try{ await navigator.clipboard.writeText(text); toast("คัดลอกแล้ว"); }
   catch(e){ prompt("คัดลอกข้อความนี้", text); }
 });
@@ -712,7 +783,9 @@ async function makeReport(o){
   const sm = o.summary;
   const sumH = sm ? 28 + sm.lines.length*30 + (sm.big ? 86 : 0) + (sm.warn ? 28 : 0) : 0;
   const bodyRows = Math.max(o.rows.length, 1);
-  const H = headH + 28 + thH + bodyRows*rowH + 24 + (sm ? sumH + 24 : 0) + 44;
+  const notes = o.notes || [];
+  const notesH = notes.length ? 44 + notes.length*26 + 8 : 0;
+  const H = headH + 28 + thH + bodyRows*rowH + 24 + (notesH ? notesH + 24 : 0) + (sm ? sumH + 24 : 0) + 44;
   const sc = 2, cv = document.createElement("canvas");
   cv.width = W*sc; cv.height = H*sc;
   const x = cv.getContext("2d"); x.scale(sc,sc); x.textBaseline = "alphabetic";
@@ -758,6 +831,20 @@ async function makeReport(o){
   });
   x.restore();
   y += 32;
+
+  // notes block (e.g. exchange rates used)
+  if (notes.length){
+    x.fillStyle = "#fff"; rr(pad-12, y-8, inner+24, notesH, 14); x.fill();
+    x.strokeStyle = "#e3e7ee"; x.stroke();
+    x.font = F(600,14); x.fillStyle = "#19456f"; x.fillText(o.notesTitle || "", pad, y+22);
+    let ny = y + 52;
+    notes.forEach(([l,v]) => {
+      x.font = F(500,15); x.fillStyle = "#1d2733"; x.fillText(fit(l, inner*0.6), pad, ny);
+      x.font = F(400,13); x.fillStyle = "#818183"; x.textAlign = "right"; x.fillText(fit(v, inner*0.4), W-pad, ny); x.textAlign = "left";
+      ny += 26;
+    });
+    y += notesH + 24;
+  }
 
   // summary
   if (sm){
@@ -822,6 +909,9 @@ $("pPng").addEventListener("click", () => {
         l.v == null ? {t:"ไม่มีเรท", s:fmt(l.sub,it.cur), warn:true}
                     : {t:fmtN(l.v), s: it.cur!==p.cur ? "= "+fmt(l.sub,it.cur) : "", b:true}]; }),
     empty: "ยังไม่มีรายการ",
+    notesTitle: "อัตราแลกเปลี่ยนที่ใช้",
+    notes: usedCurs(p).map(cu => { const r = projRate(p, cu), own = p.rates && num(p.rates[cu]) != null;
+      return [`1 ${cu} = ${r!=null ? fmt(r,p.cur) : "ไม่มีเรท"}`, own ? "กำหนดเองในโปรเจกต์" : r!=null ? "เรทกลางของฉัน" : "–"]; }),
     summary: { lines, big:["แต่ละคนต้องจ่าย", fmt(c.per,p.cur)],
       warn: c.missing.length ? `⚠ ไม่มีเรทสำหรับ ${c.missing.join(", ")} จึงไม่ถูกนับรวม` : "" },
     file: `${p.name || "project"}-${today()}`
